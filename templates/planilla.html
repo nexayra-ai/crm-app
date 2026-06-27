@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planilla - CRM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { background: #111827; color: #e5e7eb; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 0; }
+
+    /* Planilla estilo hoja de cálculo */
+    .sheet-wrap { overflow-x: auto; margin-bottom: 12px; }
+    .sheet {
+      border-collapse: collapse;
+      font-size: 12px;
+      white-space: nowrap;
+      background: #1f2937;
+    }
+    .sheet th, .sheet td {
+      border: 1px solid #374151;
+      padding: 0;
+    }
+    .sheet thead th {
+      background: #374151;
+      color: #9ca3af;
+      font-weight: 600;
+      padding: 3px 6px;
+      text-align: left;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .sheet thead th.cliente-col { width: 110px; }
+    .sheet thead th.tipo-col { width: 70px; }
+
+    .sheet td.cliente {
+      background: #1f2937;
+      padding: 2px 6px;
+      font-weight: 500;
+      color: #e5e7eb;
+      position: sticky;
+      left: 0;
+      z-index: 1;
+    }
+    .sheet td.cliente .del-btn {
+      opacity: 0;
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 10px;
+      margin-left: 4px;
+    }
+    .sheet td.cliente:hover .del-btn { opacity: 0.6; }
+
+    .sheet input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: #e5e7eb;
+      padding: 2px 6px;
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+    }
+    .sheet input:focus {
+      background: #1e3a5f;
+      box-shadow: inset 0 0 0 2px #3b82f6;
+    }
+    .sheet input::placeholder { color: #4b5563; }
+
+    /* input con valor: texto verde, numerico amarillo */
+    .sheet input.has-val { color: #fbbf24; }
+    .sheet input.has-val.pago { color: #34d399; }
+    .sheet input.has-val.fiado { color: #f87171; }
+    .sheet input.has-val.mp { color: #fbbf24; }
+    .sheet input.has-val.otros { color: #9ca3af; }
+
+    /* Dia header */
+    .dia-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .dia-header h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f3f4f6;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .dia-header .fecha { font-size: 11px; color: #6b7280; }
+    .dia-today { box-shadow: 0 0 0 2px #3b82f6; }
+
+    /* Grid de planillas */
+    .planilla-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      padding: 12px;
+    }
+    .planilla-card {
+      background: #1f2937;
+      border-radius: 6px;
+      padding: 8px;
+      border: 1px solid #374151;
+    }
+    .planilla-card.dia-today { border-color: #3b82f6; }
+
+    @media (max-width: 900px) {
+      .planilla-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Toolbar */
+    .toolbar {
+      position: sticky;
+      top: 0;
+      background: #111827;
+      z-index: 100;
+      padding: 8px 16px;
+      border-bottom: 1px solid #374151;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .toolbar input[type="text"] {
+      background: #1f2937; border: 1px solid #374151; color: #e5e7eb;
+      border-radius: 4px; padding: 4px 8px; font-size: 13px;
+    }
+    .toolbar .btn {
+      background: #2563eb; color: white; border: none; border-radius: 4px;
+      padding: 4px 10px; font-size: 13px; cursor: pointer;
+    }
+    .toolbar .btn:hover { background: #1d4ed8; }
+    .toolbar .btn.secondary { background: #374151; }
+    .toolbar .btn.secondary:hover { background: #4b5563; }
+    .toolbar .sep { width: 1px; height: 24px; background: #374151; }
+    .save-indicator {
+      font-size: 11px; color: #6b7280;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .save-indicator.saving { color: #f59e0b; }
+    .save-indicator.saved { color: #10b981; }
+
+    /* Nav semana */
+    .week-nav { display: flex; align-items: center; gap: 6px; }
+    .week-nav button {
+      background: #374151; border: none; color: #e5e7eb; border-radius: 4px;
+      padding: 2px 8px; cursor: pointer; font-size: 13px;
+    }
+    .week-nav button:hover { background: #4b5563; }
+    .week-nav span { font-size: 12px; color: #9ca3af; }
+  </style>
+</head>
+<body>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <strong style="font-size:15px;">📋 Planilla</strong>
+  <div class="sep"></div>
+  <div class="week-nav">
+    <button onclick="cambiarSemana(-1)">◀</button>
+    <span id="week-label">Esta semana</span>
+    <button onclick="cambiarSemana(1)">▶</button>
+    <button class="btn secondary" onclick="irHoy()" style="margin-left:4px;">Hoy</button>
+  </div>
+  <div class="sep"></div>
+  <input type="text" id="nuevo-cliente" placeholder="+ Cliente..." style="width:120px;">
+  <button class="btn" onclick="agregarCliente()">Agregar</button>
+  <div class="sep"></div>
+  <button class="btn secondary" onclick="verResumen()">📊 Resumen</button>
+  <button class="btn secondary" onclick="verReportes()">📈 Reportes</button>
+  <div style="margin-left:auto;" class="save-indicator" id="save-status">✓ Listo</div>
+</div>
+
+<!-- Grid de planillas -->
+<div class="planilla-grid" id="grid"></div>
+
+<script>
+const DIAS = {{ dias | tojson }};
+const DIAS_DISPLAY = {{ dias_display | tojson }};
+const TIPOS = {{ tipos | tojson }};
+const TIPOS_DISPLAY = ["Otros", "Fiado", "M/P", "Pago"];
+const TIPOS_CLASS = {otros:"otros", fiado:"fiado", mp:"mp", pago:"pago"};
+const DIA_HOY = {{ dia_hoy | tojson }};
+
+let clientes = [];
+let registros = {};  // {cliente_id: {fecha: {tipo: valor}}}
+let fechas = [];     // 7 fechas YYYY-MM-DD
+let semanaOffset = 0;
+
+// ---------- Init ----------
+async function init() {
+  await Promise.all([loadClientes(), loadRegistros()]);
+  renderGrid();
+}
+
+// ---------- API ----------
+async function loadClientes() {
+  const r = await fetch('/api/clientes');
+  clientes = await r.json();
+}
+
+async function loadRegistros() {
+  const r = await fetch('/api/registros?offset=' + semanaOffset);
+  const data = await r.json();
+  registros = data.registros;
+  fechas = data.fechas;
+}
+
+async function guardarCelda(clienteId, fecha, dia, tipo, valor) {
+  setSaveStatus('saving', 'Guardando...');
+  const r = await fetch('/api/registros', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({cliente_id: clienteId, fecha, dia_semana: dia, tipo, valor})
+  });
+  if (r.ok) {
+    setSaveStatus('saved', '✓ Guardado');
+    // actualizar cache
+    if (!registros[clienteId]) registros[clienteId] = {};
+    if (!registros[clienteId][fecha]) registros[clienteId][fecha] = {};
+    if (valor) registros[clienteId][fecha][tipo] = valor;
+    else delete registros[clienteId][fecha][tipo];
+  } else {
+    setSaveStatus('error', '✗ Error');
+  }
+}
+
+async function agregarCliente() {
+  const input = document.getElementById('nuevo-cliente');
+  const nombre = input.value.trim();
+  if (!nombre) return;
+  const r = await fetch('/api/clientes', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({nombre})
+  });
+  if (r.ok) {
+    input.value = '';
+    await loadClientes();
+    renderGrid();
+  } else if (r.status === 409) {
+    alert('Ese cliente ya existe');
+  }
+}
+
+async function borrarCliente(id, nombre) {
+  if (!confirm(`¿Eliminar cliente "${nombre}" y todos sus registros?`)) return;
+  await fetch('/api/clientes/' + id, {method: 'DELETE'});
+  await loadClientes();
+  await loadRegistros();
+  renderGrid();
+}
+
+// ---------- Render ----------
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  DIAS.forEach((dia, idx) => {
+    const fecha = fechas[idx];
+    const isToday = (semanaOffset === 0 && dia === DIA_HOY);
+    const card = document.createElement('div');
+    card.className = 'planilla-card' + (isToday ? ' dia-today' : '');
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'dia-header';
+    const fechaObj = new Date(fecha + 'T00:00:00');
+    const fechaStr = fechaObj.toLocaleDateString('es-AR', {day:'2-digit', month:'short'});
+    header.innerHTML = `
+      <h2>${DIAS_DISPLAY[idx]}</h2>
+      <span class="fecha">${fechaStr}</span>
+    `;
+    card.appendChild(header);
+
+    // Sheet
+    const wrap = document.createElement('div');
+    wrap.className = 'sheet-wrap';
+    const table = document.createElement('table');
+    table.className = 'sheet';
+    table.id = `sheet-${dia}`;
+
+    // Header row
+    const thead = document.createElement('thead');
+    thead.innerHTML = `<tr>
+      <th class="cliente-col">Cliente</th>
+      ${TIPOS_DISPLAY.map(t => `<th class="tipo-col">${t}</th>`).join('')}
+    </tr>`;
+    table.appendChild(thead);
+
+    // Body
+    const tbody = document.createElement('tbody');
+    clientes.forEach((c, ci) => {
+      const tr = document.createElement('tr');
+      // Cliente name
+      const tdName = document.createElement('td');
+      tdName.className = 'cliente';
+      tdName.innerHTML = `${c.nombre}<span class="del-btn" onclick="borrarCliente(${c.id},'${c.nombre.replace(/'/g,"\\'")}')">✕</span>`;
+      tr.appendChild(tdName);
+
+      // 4 input cells
+      TIPOS.forEach((tipo, ti) => {
+        const td = document.createElement('td');
+        const val = (registros[c.id] && registros[c.id][fecha] && registros[c.id][fecha][tipo]) || '';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = val;
+        input.placeholder = '';
+        input.dataset.cliente = c.id;
+        input.dataset.fecha = fecha;
+        input.dataset.dia = dia;
+        input.dataset.tipo = tipo;
+        input.dataset.row = ci;
+        input.dataset.col = ti + 1; // col 0 = cliente
+        input.dataset.sheet = dia;
+        if (val) input.classList.add('has-val', TIPOS_CLASS[tipo]);
+
+        // Eventos
+        input.addEventListener('blur', onCellBlur);
+        input.addEventListener('keydown', onCellKeydown);
+        input.addEventListener('focus', onCellFocus);
+
+        td.appendChild(input);
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    card.appendChild(wrap);
+    grid.appendChild(card);
+  });
+}
+
+// ---------- Cell events ----------
+function onCellFocus(e) {
+  e.target.select();
+}
+
+function onCellBlur(e) {
+  const input = e.target;
+  const val = input.value.trim();
+  const prevVal = (registros[input.dataset.cliente] &&
+                   registros[input.dataset.cliente][input.dataset.fecha] &&
+                   registros[input.dataset.cliente][input.dataset.fecha][input.dataset.tipo]) || '';
+
+  // Actualizar clase visual
+  input.classList.remove('has-val', 'otros', 'fiado', 'mp', 'pago');
+  if (val) input.classList.add('has-val', TIPOS_CLASS[input.dataset.tipo]);
+
+  // Solo guardar si cambio
+  if (val !== prevVal) {
+    guardarCelda(input.dataset.cliente, input.dataset.fecha, input.dataset.dia, input.dataset.tipo, val);
+  }
+}
+
+function onCellKeydown(e) {
+  const input = e.target;
+  const sheet = input.dataset.sheet;
+  const row = parseInt(input.dataset.row);
+  const col = parseInt(input.dataset.col);
+  const totalRows = clientes.length;
+  const totalCols = TIPOS.length + 1; // +1 cliente
+
+  let newRow = row, newCol = col, move = false;
+
+  switch(e.key) {
+    case 'Tab':
+      e.preventDefault();
+      if (e.shiftKey) { newCol = col - 1; if (newCol < 1) { newCol = totalCols - 1; newRow = row - 1; } }
+      else { newCol = col + 1; if (newCol >= totalCols) { newCol = 1; newRow = row + 1; } }
+      move = true;
+      break;
+    case 'Enter':
+      e.preventDefault();
+      newRow = row + 1;
+      move = true;
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      newRow = row + 1;
+      move = true;
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      newRow = row - 1;
+      move = true;
+      break;
+    case 'ArrowRight':
+      if (input.selectionStart === input.value.length) {
+        e.preventDefault();
+        newCol = col + 1;
+        move = true;
+      }
+      break;
+    case 'ArrowLeft':
+      if (input.selectionStart === 0) {
+        e.preventDefault();
+        newCol = col - 1;
+        move = true;
+      }
+      break;
+  }
+
+  if (move) {
+    // Wrap around
+    if (newRow >= totalRows) newRow = totalRows - 1;
+    if (newRow < 0) newRow = 0;
+    if (newCol >= totalCols) newCol = totalCols - 1;
+    if (newCol < 1) newCol = 1;
+
+    const target = document.querySelector(`input[data-sheet="${sheet}"][data-row="${newRow}"][data-col="${newCol}"]`);
+    if (target) {
+      // Forzar blur del actual para guardar
+      input.blur();
+      target.focus();
+    }
+  }
+}
+
+// ---------- Week navigation ----------
+async function cambiarSemana(delta) {
+  semanaOffset += delta;
+  await loadRegistros();
+  renderGrid();
+  updateWeekLabel();
+}
+
+async function irHoy() {
+  semanaOffset = 0;
+  await loadRegistros();
+  renderGrid();
+  updateWeekLabel();
+}
+
+function updateWeekLabel() {
+  const label = document.getElementById('week-label');
+  if (semanaOffset === 0) label.textContent = 'Esta semana';
+  else if (semanaOffset === -1) label.textContent = 'Semana anterior';
+  else if (semanaOffset === 1) label.textContent = 'Semana siguiente';
+  else label.textContent = `Semana ${semanaOffset > 0 ? '+' : ''}${semanaOffset}`;
+}
+
+// ---------- Save indicator ----------
+let saveTimer = null;
+function setSaveStatus(state, msg) {
+  const el = document.getElementById('save-status');
+  el.className = 'save-indicator ' + state;
+  el.textContent = msg;
+  if (state === 'saved') {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      el.className = 'save-indicator';
+      el.textContent = '✓ Listo';
+    }, 2000);
+  }
+}
+
+// ---------- Navigation ----------
+function verResumen() { window.location.href = '/reportes'; }
+function verReportes() { window.location.href = '/reportes'; }
+
+// Enter en input de nuevo cliente
+document.getElementById('nuevo-cliente').addEventListener('keydown', e => {
+  if (e.key === 'Enter') agregarCliente();
+});
+
+// Init
+init();
+</script>
+</body>
+</html>
