@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Resumen Mensual - CRM{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-2">Resumen Mensual</h1>
+<p class="text-gray-400 mb-6">{{ "%02d" | format(mes) }}/{{ anio }}</p>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+  {% for pg in PAGOS %}
+  <div class="bg-gray-800 rounded-lg p-5">
+    <p class="text-gray-400 text-sm">{{ pg }} (total)</p>
+    <p class="text-3xl font-bold {% if pg == 'Pago' %}text-green-400{% elif pg == 'Fiado' %}text-red-400{% elif pg == 'M/P' %}text-yellow-400{% else %}text-gray-400{% endif %}">{{ totales[pg] }}</p>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="bg-gray-800 rounded-lg p-5 mb-6 overflow-x-auto">
+  <h2 class="font-bold mb-4">Resumen por contacto</h2>
+  <table class="w-full text-sm">
+    <tr class="text-gray-400 border-b border-gray-700">
+      <th class="text-left py-2 px-2">Nombre</th>
+      {% for pg in PAGOS %}
+      <th class="text-center px-2">{{ pg }}</th>
+      {% endfor %}
+      <th class="text-right px-2">Est. Total</th>
+    </tr>
+    {% for r in resumen_data %}
+    <tr class="border-b border-gray-700 hover:bg-gray-700">
+      <td class="py-2 px-2"><a href="{{ url_for('detalle_contacto', id=r.contacto.id) }}" class="text-blue-400 hover:underline">{{ r.contacto.nombre }}</a></td>
+      {% for pg in PAGOS %}
+      <td class="text-center px-2">
+        <span class="px-2 py-1 rounded text-xs {% if pg == 'Pago' %}bg-green-600{% elif pg == 'Fiado' %}bg-red-600{% elif pg == 'M/P' %}bg-yellow-600{% else %}bg-gray-600{% endif %}">{{ r.counts[pg] }}</span>
+      </td>
+      {% endfor %}
+      <td class="text-right px-2 text-yellow-400">${{ "{:,.0f}".format(r.total_estimado) }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="text-center text-gray-500 py-4">Sin datos</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="bg-gray-800 rounded-lg p-5 mb-6">
+  <h2 class="font-bold mb-4">Distribución general</h2>
+  <canvas id="chartResumen" height="80"></canvas>
+</div>
+
+<form method="post" action="{{ url_for('cerrar_mes') }}">
+  <input type="hidden" name="anio" value="{{ anio }}">
+  <input type="hidden" name="mes" value="{{ mes }}">
+  <button type="submit" class="bg-blue-600 px-6 py-3 rounded hover:bg-blue-500 font-bold">
+    {% if ya_cerrado %}🔄 Actualizar cierre de mes{% else %}📋 Cerrar mes y guardar resumen{% endif %}
+  </button>
+</div>
+
+<p class="text-gray-500 text-xs mt-4">El resumen cuenta cuántos días de cada tipo de pago tuvo cada contacto en la semana, multiplicado por 4 (estimación mensual).</p>
+{% endblock %}
+{% block extra_js %}
+<script>
+const PAGOS = {{ PAGOS | tojson }};
+const totales = {{ totales | tojson }};
+const data = PAGOS.map(p => totales[p]);
+const colors = PAGOS.map(p => p === 'Pago' ? '#10b981' : p === 'Fiado' ? '#ef4444' : p === 'M/P' ? '#f59e0b' : '#6b7280');
+new Chart(document.getElementById('chartResumen'), {type:'doughnut',data:{labels:PAGOS,datasets:[{data,backgroundColor:colors}]},options:{plugins:{legend:{labels:{color:'#e5e7eb'}}}}});
+</script>
+{% endblock %}

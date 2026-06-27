@@ -2,22 +2,14 @@
 {% block title %}{{ c.nombre }} - CRM{% endblock %}
 {% block content %}
 <div class="flex justify-between items-start mb-6">
-  <div>
-    <h1 class="text-2xl font-bold">{{ c.nombre }}</h1>
-    <p class="text-gray-400">{{ c.empresa or '' }}</p>
-  </div>
+  <h1 class="text-2xl font-bold">{{ c.nombre }}</h1>
   <div class="flex gap-2">
     <a href="{{ url_for('editar_contacto', id=c.id) }}" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-500">Editar</a>
     <a href="{{ url_for('contactos') }}" class="bg-gray-700 px-4 py-2 rounded hover:bg-gray-600">Volver</a>
   </div>
 </div>
-
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
   <div class="bg-gray-800 rounded-lg p-5 space-y-2">
-    <p><span class="text-gray-400">Email:</span> {{ c.email or '-' }}</p>
-    <p><span class="text-gray-400">Teléfono:</span> {{ c.telefono or '-' }}</p>
-    <p><span class="text-gray-400">Categoría:</span> <span class="bg-gray-700 px-2 py-1 rounded text-xs">{{ c.categoria }}</span></p>
-    <p><span class="text-gray-400">Estado:</span> <span class="px-2 py-1 rounded text-xs {% if c.estado == 'Activo' %}bg-green-600{% elif c.estado == 'Inactivo' %}bg-red-600{% else %}bg-yellow-600{% endif %}">{{ c.estado }}</span></p>
     <p><span class="text-gray-400">Valor:</span> <span class="text-yellow-400 font-bold">${{ "{:,.0f}".format(c.valor) }}</span></p>
     <p><span class="text-gray-400">Creado:</span> {{ c.fecha_creacion }}</p>
     <p><span class="text-gray-400">Actualizado:</span> {{ c.fecha_actualizacion }}</p>
@@ -27,29 +19,29 @@
     <p class="text-gray-300 whitespace-pre-wrap">{{ c.notas or 'Sin notas' }}</p>
   </div>
 </div>
-
 <div class="bg-gray-800 rounded-lg p-5 mb-6">
-  <h3 class="font-bold mb-3">Registrar Interacción</h3>
-  <form method="post" action="{{ url_for('add_interaccion', id=c.id) }}" class="flex gap-2">
-    <select name="tipo" class="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm">
-      <option>Llamada</option><option>Email</option><option>Reunión</option><option>Nota</option><option>WhatsApp</option>
-    </select>
-    <input type="text" name="descripcion" placeholder="Descripción..." required
-           class="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm outline-none focus:border-blue-500">
-    <button class="bg-blue-600 px-4 py-2 rounded text-sm hover:bg-blue-500">+</button>
-  </form>
-</div>
-
-<div class="bg-gray-800 rounded-lg p-5">
-  <h3 class="font-bold mb-3">Historial de Interacciones</h3>
-  {% for i in interacciones %}
-  <div class="border-b border-gray-700 py-2">
-    <span class="text-blue-400 text-xs font-bold">{{ i.tipo }}</span>
-    <span class="text-gray-500 text-xs float-right">{{ i.fecha }}</span>
-    <p class="text-gray-300 text-sm">{{ i.descripcion }}</p>
+  <h3 class="font-bold mb-4">Pago por día</h3>
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+    {% for dia in DIAS %}
+    <div class="flex items-center gap-2">
+      <label class="text-sm w-24">{{ dia }}</label>
+      <select onchange="cambiarPago('{{ dia }}', this.value)" class="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm outline-none">
+        {% for pg in PAGOS %}
+        <option value="{{ pg }}" {{ 'selected' if c[dia] == pg else '' }}>{{ pg }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endfor %}
   </div>
-  {% else %}
-  <p class="text-gray-500 text-sm">Sin interacciones registradas.</p>
-  {% endfor %}
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+async function cambiarPago(dia, pago) {
+  await fetch('/api/contactos/{{ c.id }}/pago', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({dia: dia, pago: pago})
+  });
+}
+</script>
 {% endblock %}

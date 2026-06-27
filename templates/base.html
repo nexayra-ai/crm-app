@@ -1,28 +1,23 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}CRM{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>body{background:#111827;color:#e5e7eb}</style>
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen">
-  <nav class="bg-gray-800 px-6 py-3 flex justify-between items-center">
-    <a href="{{ url_for('dashboard') }}" class="text-xl font-bold text-blue-400">⚡ CRM</a>
-    <div class="flex gap-4">
-      <a href="{{ url_for('dashboard') }}" class="hover:text-blue-400">Dashboard</a>
-      <a href="{{ url_for('contactos') }}" class="hover:text-blue-400">Contactos</a>
-      <a href="{{ url_for('reportes') }}" class="hover:text-blue-400">Reportes</a>
-      <a href="{{ url_for('nuevo_contacto') }}" class="bg-blue-600 px-3 py-1 rounded hover:bg-blue-500">+ Nuevo</a>
-    </div>
-  </nav>
-  <main class="max-w-6xl mx-auto p-6">
-    {% block content %}{% endblock %}
-  </main>
-  <script>
-  // Auto-refresh stats cada 30s
-  {% block extra_js %}{% endblock %}
-  </script>
+<body class="min-h-screen">
+<nav class="bg-gray-900 p-4 flex gap-6 items-center">
+  <a href="{{ url_for('dashboard') }}" class="font-bold text-blue-400 text-lg">CRM</a>
+  <a href="{{ url_for('contactos') }}" class="hover:text-blue-400">Contactos</a>
+  <a href="{{ url_for('resumen') }}" class="hover:text-blue-400">Resumen Mensual</a>
+  <a href="{{ url_for('reportes') }}" class="hover:text-blue-400">Reportes</a>
+</nav>
+<main class="max-w-7xl mx-auto p-6">
+  {% block content %}{% endblock %}
+</main>
+{% block extra_js %}{% endblock %}
 </body>
 </html>
