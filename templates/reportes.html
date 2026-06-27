@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Reportes - CRM{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Reportes</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+  <div class="bg-gray-800 rounded-lg p-5">
+    <h2 class="font-bold mb-3">Contactos y Valor por Categoría</h2>
+    <table class="w-full text-sm">
+      <tr class="text-gray-400 border-b border-gray-700">
+        <th class="text-left py-2">Categoría</th><th class="text-right">N°</th><th class="text-right">Valor</th>
+      </tr>
+      {% for r in por_categoria %}
+      <tr class="border-b border-gray-700">
+        <td class="py-2">{{ r.categoria }}</td>
+        <td class="text-right">{{ r.n }}</td>
+        <td class="text-right text-yellow-400">${{ "{:,.0f}".format(r.total) }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="bg-gray-800 rounded-lg p-5">
+    <h2 class="font-bold mb-3">Contactos y Valor por Estado</h2>
+    <table class="w-full text-sm">
+      <tr class="text-gray-400 border-b border-gray-700">
+        <th class="text-left py-2">Estado</th><th class="text-right">N°</th><th class="text-right">Valor</th>
+      </tr>
+      {% for r in por_estado %}
+      <tr class="border-b border-gray-700">
+        <td class="py-2">{{ r.estado }}</td>
+        <td class="text-right">{{ r.n }}</td>
+        <td class="text-right text-yellow-400">${{ "{:,.0f}".format(r.total) }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<div class="bg-gray-800 rounded-lg p-5 mb-6">
+  <h2 class="font-bold mb-3">Top Empresas</h2>
+  <table class="w-full text-sm">
+    <tr class="text-gray-400 border-b border-gray-700">
+      <th class="text-left py-2">Empresa</th><th class="text-right">Contactos</th><th class="text-right">Valor</th>
+    </tr>
+    {% for r in por_empresa %}
+    <tr class="border-b border-gray-700">
+      <td class="py-2">{{ r.empresa }}</td>
+      <td class="text-right">{{ r.n }}</td>
+      <td class="text-right text-yellow-400">${{ "{:,.0f}".format(r.total) }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3" class="text-center text-gray-500 py-2">Sin datos</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div class="bg-gray-800 rounded-lg p-5">
+    <h2 class="font-bold mb-3">Distribución por Categoría</h2>
+    <canvas id="chartCat"></canvas>
+  </div>
+  <div class="bg-gray-800 rounded-lg p-5">
+    <h2 class="font-bold mb-3">Valor por Categoría</h2>
+    <canvas id="chartVal"></canvas>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const cats = {{ por_categoria | map(attribute='categoria') | list | tojson }};
+const nums = {{ por_categoria | map(attribute='n') | list | tojson }};
+const vals = {{ por_categoria | map(attribute='total') | list | tojson }};
+const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899'];
+
+new Chart(document.getElementById('chartCat'),{type:'doughnut',data:{labels:cats,datasets:[{data:nums,backgroundColor:colors}]},options:{plugins:{legend:{labels:{color:'#e5e7eb'}}}}});
+new Chart(document.getElementById('chartVal'),{type:'bar',data:{labels:cats,datasets:[{label:'Valor $',data:vals,backgroundColor:'#f59e0b'}]},options:{plugins:{legend:{labels:{color:'#e5e7eb'}}},scales:{x:{ticks:{color:'#e5e7eb'}},y:{ticks:{color:'#e5e7eb'}}}}});
+</script>
+{% endblock %}

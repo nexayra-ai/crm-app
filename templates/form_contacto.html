@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if c else 'Nuevo' }} Contacto - CRM{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">{{ 'Editar' if c else 'Nuevo' }} Contacto</h1>
+
+<form method="post" class="max-w-xl space-y-4">
+  <div>
+    <label class="block text-sm text-gray-400 mb-1">Nombre *</label>
+    <input type="text" name="nombre" value="{{ c.nombre if c else '' }}" required
+           class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 focus:border-blue-500 outline-none">
+  </div>
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm text-gray-400 mb-1">Email</label>
+      <input type="email" name="email" value="{{ c.email if c else '' }}"
+             class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 outline-none">
+    </div>
+    <div>
+      <label class="block text-sm text-gray-400 mb-1">Teléfono</label>
+      <input type="text" name="telefono" value="{{ c.telefono if c else '' }}"
+             class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 outline-none">
+    </div>
+  </div>
+  <div>
+    <label class="block text-sm text-gray-400 mb-1">Empresa</label>
+    <input type="text" name="empresa" value="{{ c.empresa if c else '' }}"
+           class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 outline-none">
+  </div>
+  <div class="grid grid-cols-3 gap-4">
+    <div>
+      <label class="block text-sm text-gray-400 mb-1">Categoría</label>
+      <select name="categoria" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 outline-none">
+        {% for cat in ['Lead','Cliente','Prospecto','Partner','Otro'] %}
+        <option value="{{ cat }}" {{ 'selected' if c and c.categoria == cat else '' }}>{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm text-gray-400 mb-1">Estado</label>
+      <select name="estado" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 outline-none">
+        {% for est in ['Activo','Inactivo','Pendiente'] %}
+        <option value="{{ est }}" {{ 'selected' if c and c.estado == est else '' }}>{{ est }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm text-gray-400 mb-1">Valor ($)</label>
+      <input type="number" name="valor" step="0.01" value="{{ c.valor if c else '0' }}"
+             class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 outline-none">
+    </div>
+  </div>
+  <div>
+    <label class="block text-sm text-gray-400 mb-1">Notas</label>
+    <textarea name="notas" rows="3" class="w-full bg-gray-800 border border-gray-700 rounded px-4 py-2 outline-none">{{ c.notas if c else '' }}</textarea>
+  </div>
+  <div class="flex gap-2">
+    <button type="submit" class="bg-blue-600 px-6 py-2 rounded hover:bg-blue-500">Guardar</button>
+    <a href="{{ url_for('contactos') }}" class="bg-gray-700 px-6 py-2 rounded hover:bg-gray-600">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

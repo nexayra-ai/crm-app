@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - CRM{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Dashboard</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+  <div class="bg-gray-800 rounded-lg p-5">
+    <p class="text-gray-400 text-sm">Total Contactos</p>
+    <p class="text-3xl font-bold text-blue-400" id="stat-total">{{ total }}</p>
+  </div>
+  <div class="bg-gray-800 rounded-lg p-5">
+    <p class="text-gray-400 text-sm">Activos</p>
+    <p class="text-3xl font-bold text-green-400" id="stat-activos">{{ activos }}</p>
+  </div>
+  <div class="bg-gray-800 rounded-lg p-5">
+    <p class="text-gray-400 text-sm">Valor Total</p>
+    <p class="text-3xl font-bold text-yellow-400" id="stat-valor">${{ "{:,.0f}".format(valor_total) }}</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+  <div class="bg-gray-800 rounded-lg p-5">
+    <h2 class="font-bold mb-3">Por Categoría</h2>
+    <canvas id="chartCategoria"></canvas>
+  </div>
+  <div class="bg-gray-800 rounded-lg p-5">
+    <h2 class="font-bold mb-3">Por Estado</h2>
+    <canvas id="chartEstado"></canvas>
+  </div>
+</div>
+
+<div class="bg-gray-800 rounded-lg p-5">
+  <h2 class="font-bold mb-3">Contactos Recientes</h2>
+  <table class="w-full text-sm">
+    <tr class="text-gray-400 border-b border-gray-700">
+      <th class="text-left py-2">Nombre</th>
+      <th class="text-left">Empresa</th>
+      <th class="text-left">Categoría</th>
+      <th class="text-left">Estado</th>
+      <th class="text-right">Valor</th>
+    </tr>
+    {% for c in recientes %}
+    <tr class="border-b border-gray-700 hover:bg-gray-700">
+      <td class="py-2"><a href="{{ url_for('detalle_contacto', id=c.id) }}" class="text-blue-400 hover:underline">{{ c.nombre }}</a></td>
+      <td>{{ c.empresa or '-' }}</td>
+      <td>{{ c.categoria }}</td>
+      <td><span class="px-2 py-1 rounded text-xs {% if c.estado == 'Activo' %}bg-green-600{% else %}bg-gray-600{% endif %}">{{ c.estado }}</span></td>
+      <td class="text-right">${{ "{:,.0f}".format(c.valor) }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<p class="text-gray-500 text-xs mt-4">Última actualización: <span id="last-update">{{ now().strftime('%H:%M:%S') }}</span></p>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const catLabels = {{ por_categoria | map(attribute='categoria') | list | tojson }};
+const catData = {{ por_categoria | map(attribute='n') | list | tojson }};
+const estLabels = {{ por_estado | map(attribute='estado') | list | tojson }};
+const estData = {{ por_estado | map(attribute='n') | list | tojson }};
+
+const cc = document.getElementById('chartCategoria');
+new Chart(cc, {type:'doughnut',data:{labels:catLabels,datasets:[{data:catData,backgroundColor:['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899']}]},options:{plugins:{legend:{labels:{color:'#e5e7eb'}}}}});
+
+const ce = document.getElementById('chartEstado');
+new Chart(ce, {type:'bar',data:{labels:estLabels,datasets:[{data:estData,backgroundColor:'#3b82f6'}]},options:{plugins:{legend:{labels:{color:'#e5e7eb'}}},scales:{x:{ticks:{color:'#e5e7eb'}},y:{ticks:{color:'#e5e7eb'}}}}});
+
+// Auto-refresh cada 30s
+setInterval(async()=>{
+  const r = await fetch('/api/stats');
+  const d = await r.json();
+  document.getElementById('stat-total').textContent = d.total;
+  document.getElementById('stat-activos').textContent = d.activos;
+  document.getElementById('stat-valor').textContent = '$'+d.valor_total.toLocaleString();
+  document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+}, 30000);
+</script>
+{% endblock %}
